@@ -23,6 +23,14 @@ export interface ProjectDetail {
   header_files: string[]
 }
 
+export interface FileNode {
+  name: string
+  path: string
+  type: 'file' | 'directory'
+  extension?: string
+  children?: FileNode[]
+}
+
 // ==================== API 调用 ====================
 
 async function callPy<T>(fn: string, ...args: unknown[]): Promise<T> {
@@ -50,4 +58,11 @@ export async function scanQtProjects(): Promise<QtProject[]> {
  */
 export async function getProjectDetail(projectPath: string): Promise<ProjectDetail> {
   return callPy<ProjectDetail>('get_project_detail', projectPath)
+}
+
+/**
+ * 获取项目文件树
+ */
+export async function getProjectFileTree(projectPath: string): Promise<FileNode[]> {
+  return callPy<FileNode[]>('get_project_file_tree', projectPath)
 }

@@ -173,3 +173,17 @@ class API:
             "cpp_files": [f.name for f in cpp_files],
             "header_files": [f.name for f in h_files],
         }
+    
+    def get_project_file_tree(self, project_path: str):
+        """
+        获取项目文件树
+        
+        Args:
+            project_path: 项目路径
+            
+        Returns:
+            文件树结构
+        """
+        logger.info(f"获取项目文件树: {project_path}")
+        nodes = scan_directory_tree(project_path, max_depth=5)
+        return [node.to_dict() for node in nodes]
