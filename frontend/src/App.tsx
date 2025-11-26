@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react'
 import { scanQtProjects, getProjectDetail, getProjectFileTree } from './api/qt-project'
 import type { QtProject, ProjectDetail, FileNode } from './api/qt-project'
 import { FileTree } from './components/FileTree'
+import { Modal } from './components/Modal'
+import { AboutContent } from './components/AboutContent'
+
+type ViewMode = 'overview' | 'quality' | 'visual' | 'settings'
 
 function App() {
   // 项目列表状态
@@ -10,6 +14,10 @@ function App() {
   const [projectDetail, setProjectDetail] = useState<ProjectDetail | null>(null)
   const [fileTree, setFileTree] = useState<FileNode[]>([])
   const [loading, setLoading] = useState(false)
+  
+  // 视图模式和关于弹窗
+  const [viewMode, setViewMode] = useState<ViewMode>('overview')
+  const [showAbout, setShowAbout] = useState(false)
 
   // 加载项目列表
   useEffect(() => {
@@ -54,8 +62,8 @@ function App() {
   return (
     <div className="h-screen bg-gray-50 dark:bg-gray-900 flex overflow-hidden">
       {/* 左侧：项目列表 */}
-      <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto flex-shrink-0">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col flex-shrink-0">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
               Qt 项目
             </h2>
@@ -68,7 +76,7 @@ function App() {
             </button>
           </div>
 
-          <div className="p-2">
+          <div className="flex-1 overflow-y-auto p-2">
             {projects.length === 0 ? (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                 <p className="text-sm">未找到 Qt 项目</p>
@@ -96,6 +104,16 @@ function App() {
                 ))}
               </div>
             )}
+          </div>
+          
+          {/* 关于按钮 - 固定在底部 */}
+          <div className="border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <button
+              onClick={() => setShowAbout(true)}
+              className="w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              关于 SLA Qt Tester
+            </button>
           </div>
       </aside>
 
@@ -139,8 +157,54 @@ function App() {
                 <p className="text-sm mt-2">从左侧列表中选择要测试的 Qt 项目</p>
               </div>
             </div>
-          ) : projectDetail ? (
+          ) : (
             <div className="p-4">
+              {/* 功能模块切换标签 */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-2 inline-flex gap-2 mb-4 shadow-sm">
+                <button
+                  onClick={() => setViewMode('overview')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all text-sm ${
+                    viewMode === 'overview'
+                      ? 'bg-blue-500 text-white shadow-md'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  📊 项目概览
+                </button>
+                <button
+                  onClick={() => setViewMode('quality')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all text-sm ${
+                    viewMode === 'quality'
+                      ? 'bg-green-500 text-white shadow-md'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  📋 质量管理
+                </button>
+                <button
+                  onClick={() => setViewMode('visual')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all text-sm ${
+                    viewMode === 'visual'
+                      ? 'bg-purple-500 text-white shadow-md'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  🎯 视觉测试
+                </button>
+                <button
+                  onClick={() => setViewMode('settings')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all text-sm ${
+                    viewMode === 'settings'
+                      ? 'bg-gray-500 text-white shadow-md'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  ⚙️ 设置
+                </button>
+              </div>
+
+              {/* 根据 viewMode 显示不同内容 */}
+              {viewMode === 'overview' && projectDetail && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
                   项目概览
@@ -171,9 +235,100 @@ function App() {
                   </p>
                 </div>
               </div>
+              )}
+            
+            {viewMode === 'quality' && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
+                  质量管理
+                </h2>
+                <div className="space-y-4">
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <h3 className="text-base font-semibold text-green-900 dark:text-green-100 mb-2">
+                      🔍 静态代码分析
+                    </h3>
+                    <p className="text-sm text-green-800 dark:text-green-200 mb-3">
+                      扫描 C++ 代码，检查代码质量问题
+                    </p>
+                    <button className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm">
+                      开始扫描
+                    </button>
+                  </div>
+                  
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h3 className="text-base font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                      🧪 单元测试
+                    </h3>
+                    <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
+                      扫描并运行 QTest 测试用例
+                    </p>
+                    <button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm">
+                      扫描测试用例
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {viewMode === 'visual' && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
+                  视觉测试
+                </h2>
+                <div className="space-y-4">
+                  <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <h3 className="text-base font-semibold text-purple-900 dark:text-purple-100 mb-2">
+                      📹 实时监控
+                    </h3>
+                    <p className="text-sm text-purple-800 dark:text-purple-200 mb-3">
+                      启动被测应用并实时捕获画面
+                    </p>
+                    <button className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 text-sm">
+                      启动监控
+                    </button>
+                  </div>
+                  
+                  <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                    <h3 className="text-base font-semibold text-orange-900 dark:text-orange-100 mb-2">
+                      ⚡ 压力测试
+                    </h3>
+                    <p className="text-sm text-orange-800 dark:text-orange-200 mb-3">
+                      设置迭代次数进行压力测试
+                    </p>
+                    <button className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 text-sm">
+                      开始测试
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {viewMode === 'settings' && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
+                  设置
+                </h2>
+                <div className="space-y-4">
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
+                      应用信息
+                    </h3>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                      <p>版本: v1.0.0</p>
+                      <p>项目路径: {projectDetail?.path}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             </div>
-          ) : null}
+          )}
       </main>
+      
+      {/* 关于弹窗 */}
+      <Modal isOpen={showAbout} onClose={() => setShowAbout(false)} title="关于 SLA Qt Tester">
+        <AboutContent />
+      </Modal>
     </div>
   )
 }
