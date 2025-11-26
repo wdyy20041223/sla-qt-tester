@@ -262,6 +262,8 @@ class API:
             文件内容和类型信息
         """
         from pathlib import Path
+        import base64
+        import mimetypes
         
         logger.info(f"读取文件: {file_path}")
         
@@ -274,18 +276,52 @@ class API:
             if not file.is_file():
                 return {"error": "不是文件", "content": None}
             
-            # 读取文件内容
+            # 获取文件扩展名
+            ext = file.suffix.lower()
+            
+            # 判断是否为图片文件
+            image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.svg', '.bmp', '.webp', '.ico', '.tiff', '.tif'}
+            
+            if ext in image_extensions:
+                # 读取图片文件为 base64
+                try:
+                    with open(file, 'rb') as f:
+                        image_data = f.read()
+                    
+                    # 转换为 base64
+                    base64_data = base64.b64encode(image_data).decode('utf-8')
+                    
+                    # 获取 MIME 类型
+                    mime_type = mimetypes.guess_type(file_path)[0] or 'image/png'
+                    
+                    logger.info(f"成功读取图片: {file_path}, 大小: {len(image_data)} bytes")
+                    
+                    return {
+                        "content": base64_data,
+                        "size": file.stat().st_size,
+                        "error": None,
+                        "is_image": True,
+                        "mime_type": mime_type
+                    }
+                except Exception as e:
+                    logger.error(f"读取图片失败: {e}")
+                    return {"error": f"读取图片失败: {str(e)}", "content": None}
+            
+            # 读取文本文件内容
             try:
                 content = file.read_text(encoding='utf-8')
+                logger.info(f"成功读取文本文件: {file_path}, 大小: {len(content)} 字符")
                 return {
                     "content": content,
                     "size": file.stat().st_size,
-                    "error": None
+                    "error": None,
+                    "is_image": False
                 }
             except UnicodeDecodeError:
-                # 二进制文件
+                # 二进制文件（非图片）
+                logger.warning(f"无法读取二进制文件: {file_path}")
                 return {
-                    "error": "无法读取二进制文件",
+                    "error": "无法读取二进制文件（非图片格式）",
                     "content": None,
                     "is_binary": True
                 }

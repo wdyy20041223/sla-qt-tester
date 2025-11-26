@@ -12,10 +12,12 @@ export function FilePreview({ file }: FilePreviewProps) {
   const [content, setContent] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
+  const [imageData, setImageData] = useState<{ base64: string; mimeType: string } | null>(null)
 
   useEffect(() => {
     if (!file || file.type === 'directory') {
       setContent('')
+      setImageData(null)
       return
     }
 
@@ -27,6 +29,7 @@ export function FilePreview({ file }: FilePreviewProps) {
 
     setLoading(true)
     setError('')
+    setImageData(null)
 
     try {
       // 调用后端 API 读取文件内容
@@ -34,6 +37,15 @@ export function FilePreview({ file }: FilePreviewProps) {
       
       if (result.error) {
         throw new Error(result.error)
+      }
+
+      // 判断是否为图片
+      if (result.is_image && result.content && result.mime_type) {
+        setImageData({
+          base64: result.content,
+          mimeType: result.mime_type
+        })
+        return
       }
 
       const text = result.content || ''
@@ -71,10 +83,6 @@ export function FilePreview({ file }: FilePreviewProps) {
     return ['cpp', 'cc', 'cxx', 'c', 'h', 'hpp', 'hxx', 'cmake', 'pro', 'qrc', 'ui'].includes(ext)
   }
 
-  const isImageFile = (ext?: string): boolean => {
-    if (!ext) return false
-    return ['png', 'jpg', 'jpeg', 'gif', 'svg', 'bmp', 'webp', 'ico'].includes(ext)
-  }
 
   const getLanguage = (ext?: string): string => {
     if (!ext) return 'text'
@@ -124,10 +132,12 @@ export function FilePreview({ file }: FilePreviewProps) {
 
   const ext = file.name.split('.').pop()?.toLowerCase()
 
-  // 图片预览（需要通过后端读取）
-  if (isImageFile(ext)) {
+  // 图片预览
+  if (imageData) {
+    const dataUrl = `data:${imageData.mimeType};base64,${imageData.base64}`
+    
     return (
-      <div className="h-full overflow-auto p-4">
+      <div className="h-full overflow-auto p-4 bg-gray-100 dark:bg-gray-900">
         <div className="mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-sm font-semibold text-gray-800 dark:text-white">
             {file.name}
@@ -136,12 +146,12 @@ export function FilePreview({ file }: FilePreviewProps) {
             {file.path}
           </p>
         </div>
-        <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg p-4">
-          <div className="text-center text-gray-500 dark:text-gray-400">
-            <div className="text-4xl mb-2">🖼️</div>
-            <div className="text-sm">图片预览功能开发中</div>
-            <div className="text-xs mt-1">文件路径: {file.path}</div>
-          </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <img 
+            src={dataUrl} 
+            alt={file.name}
+            className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-lg"
+          />
         </div>
       </div>
     )

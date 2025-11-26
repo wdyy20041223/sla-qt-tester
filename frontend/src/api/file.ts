@@ -10,6 +10,8 @@ declare const window: {
         size?: number
         error: string | null
         is_binary?: boolean
+        is_image?: boolean
+        mime_type?: string
       }>
     }
   }
