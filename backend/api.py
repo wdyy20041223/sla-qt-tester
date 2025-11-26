@@ -1,21 +1,27 @@
 """
-Python API 层
-暴露给 JavaScript 的所有方法
+PyWebView JS Bridge API
+暴露 Python 功能给前端 JavaScript
 """
-from typing import Dict, List, Any
+from pathlib import Path
+from typing import Dict, List
 from core.calculator import add, subtract, multiply, divide, power
 from core.user_service import UserService
+from core.qt_project import scan_qt_projects, scan_directory_tree
 from core.utils.logger import logger
+import platform
+import sys
 
 
 class API:
     """
-    JS Bridge API
-    所有方法都会自动暴露为 window.pywebview.api.xxx
+    PyWebView API 类
+    所有方法会自动暴露给前端 JavaScript
     """
 
     def __init__(self):
         self.user_service = UserService()
+        # 获取 playground 目录路径
+        self.playground_dir = Path(__file__).parent.parent / "playground"
         logger.info("API 初始化完成")
 
     # ==================== 计算器 API ====================
@@ -112,12 +118,58 @@ class API:
         """测试连接"""
         return "pong"
 
-    def get_system_info(self) -> Dict[str, Any]:
+    def get_system_info(self):
         """获取系统信息"""
-        import platform
+        logger.info("获取系统信息")
         return {
             "platform": platform.system(),
             "platform_version": platform.version(),
-            "python_version": platform.python_version(),
-            "machine": platform.machine(),
+            "python_version": sys.version,
+            "architecture": platform.machine(),
+        }
+    
+    # ==================== Qt 项目管理 ====================
+    
+    def scan_qt_projects(self):
+        """
+        扫描 playground 目录下的 Qt 项目
+        
+        Returns:
+            项目列表 [{"name": "...", "path": "...", ...}]
+        """
+        logger.info(f"扫描 Qt 项目: {self.playground_dir}")
+        projects = scan_qt_projects(str(self.playground_dir))
+        return [proj.to_dict() for proj in projects]
+    
+    def get_project_detail(self, project_path: str):
+        """
+        获取项目详细信息
+        
+        Args:
+            project_path: 项目路径
+            
+        Returns:
+            项目详细信息
+        """
+        logger.info(f"获取项目详情: {project_path}")
+        project_dir = Path(project_path)
+        
+        if not project_dir.exists():
+            return {"error": "项目不存在"}
+        
+        # 统计项目文件
+        cpp_files = list(project_dir.glob("*.cpp")) + list(project_dir.glob("*.cc"))
+        h_files = list(project_dir.glob("*.h")) + list(project_dir.glob("*.hpp"))
+        ui_files = list(project_dir.glob("*.ui"))
+        qrc_files = list(project_dir.glob("*.qrc"))
+        
+        return {
+            "path": str(project_dir),
+            "name": project_dir.name,
+            "cpp_count": len(cpp_files),
+            "header_count": len(h_files),
+            "ui_count": len(ui_files),
+            "qrc_count": len(qrc_files),
+            "cpp_files": [f.name for f in cpp_files],
+            "header_files": [f.name for f in h_files],
         }
