@@ -250,3 +250,45 @@ class API:
             failure_output
         )
         return analysis
+    
+    def read_file_content(self, file_path: str) -> Dict:
+        """
+        读取文件内容
+        
+        Args:
+            file_path: 文件路径
+            
+        Returns:
+            文件内容和类型信息
+        """
+        from pathlib import Path
+        
+        logger.info(f"读取文件: {file_path}")
+        
+        try:
+            file = Path(file_path)
+            
+            if not file.exists():
+                return {"error": "文件不存在", "content": None}
+            
+            if not file.is_file():
+                return {"error": "不是文件", "content": None}
+            
+            # 读取文件内容
+            try:
+                content = file.read_text(encoding='utf-8')
+                return {
+                    "content": content,
+                    "size": file.stat().st_size,
+                    "error": None
+                }
+            except UnicodeDecodeError:
+                # 二进制文件
+                return {
+                    "error": "无法读取二进制文件",
+                    "content": None,
+                    "is_binary": True
+                }
+        except Exception as e:
+            logger.error(f"读取文件失败: {e}")
+            return {"error": str(e), "content": None}

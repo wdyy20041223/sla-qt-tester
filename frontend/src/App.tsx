@@ -5,8 +5,9 @@ import { FileTree } from './components/FileTree'
 import { Modal } from './components/Modal'
 import { AboutContent } from './components/AboutContent'
 import { UnitTestPanel } from './components/UnitTestPanel'
+import { FilePreview } from './components/FilePreview'
 
-type ViewMode = 'overview' | 'quality' | 'visual' | 'settings'
+type ViewMode = 'overview' | 'quality' | 'visual' | 'settings' | 'filePreview'
 
 function App() {
   // 项目列表状态
@@ -15,6 +16,7 @@ function App() {
   const [projectDetail, setProjectDetail] = useState<ProjectDetail | null>(null)
   const [fileTree, setFileTree] = useState<FileNode[]>([])
   const [loading, setLoading] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<FileNode | null>(null)
   
   // 视图模式和关于弹窗
   const [viewMode, setViewMode] = useState<ViewMode>('overview')
@@ -40,6 +42,7 @@ function App() {
   // 选择项目
   const handleSelectProject = async (project: QtProject) => {
     setSelectedProject(project)
+    setSelectedFile(null)  // 切换项目时清空选中文件
     setLoading(true)
     try {
       const [detail, tree] = await Promise.all([
@@ -56,8 +59,10 @@ function App() {
   }
 
   const handleFileClick = (node: FileNode) => {
-    console.log('点击文件:', node)
-    // TODO: 在右侧显示文件内容或测试信息
+    if (node.type === 'file') {
+      setSelectedFile(node)
+      setViewMode('filePreview')  // 自动切换到文件预览标签
+    }
   }
 
   return (
@@ -159,9 +164,9 @@ function App() {
               </div>
             </div>
           ) : (
-            <div className="p-4">
+            <div className="p-4 h-full flex flex-col">
               {/* 功能模块切换标签 */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-2 inline-flex gap-2 mb-4 shadow-sm">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-2 inline-flex gap-2 mb-4 shadow-sm flex-shrink-0">
                 <button
                   onClick={() => setViewMode('overview')}
                   className={`px-4 py-2 rounded-lg font-medium transition-all text-sm ${
@@ -201,6 +206,16 @@ function App() {
                   }`}
                 >
                   ⚙️ 设置
+                </button>
+                <button
+                  onClick={() => setViewMode('filePreview')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all text-sm ${
+                    viewMode === 'filePreview'
+                      ? 'bg-purple-500 text-white shadow-md'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  📄 文件预览
                 </button>
               </div>
 
@@ -296,6 +311,12 @@ function App() {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {viewMode === 'filePreview' && (
+              <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+                <FilePreview file={selectedFile} projectPath={selectedProject?.path || ''} />
               </div>
             )}
             </div>
