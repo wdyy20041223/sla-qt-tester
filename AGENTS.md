@@ -98,3 +98,40 @@ frontend/src/api/
 ### 5. 数据传递限制
 - 只能传递 JSON 可序列化对象（字典、列表、基本类型）
 - 不能传递类实例、函数等复杂对象
+
+### 6. Qt 项目测试编译
+- **必须在 build 目录构建**：`mkdir -p build && cd build && cmake .. && cmake --build .`
+- **不要在项目根目录运行 cmake**：会污染源代码目录，导致 git 状态混乱
+- **可执行文件查找逻辑**：后端扫描器在 `project_dir/build/tests/` 查找测试可执行文件
+- **Qt 路径配置**：使用 `-DCMAKE_PREFIX_PATH=/path/to/Qt/6.x.x/macos` 指定 Qt 安装路径
+- **清理构建产物**：删除整个 `build` 目录即可，不影响源代码
+
+## Qt 测试开发规范
+
+### 测试文件组织
+```
+playground/项目名/
+├── tests/
+│   ├── CMakeLists.txt          # 测试构建配置
+│   ├── test_*.cpp              # 测试源文件
+│   └── README_*.md             # 测试文档（可选）
+└── build/                      # 构建目录（gitignored）
+    └── tests/
+        └── test_*              # 编译后的可执行文件
+```
+
+### 测试扫描逻辑
+后端 `core/qt_project/unit_test_scanner.py` 的查找规则：
+1. 扫描 `tests/` 目录下的 `test_*.cpp` 文件
+2. 在 `build/tests/` 目录查找对应的可执行文件
+3. macOS 优先查找 `.app` 包，回退到普通可执行文件
+4. 返回测试信息（包含 `exists` 字段标识可执行文件是否存在）
+
+### 编译流程示例
+```bash
+cd playground/diagramscene_ultima
+mkdir -p build && cd build
+cmake -DCMAKE_PREFIX_PATH=/Users/用户名/Qt/6.10.1/macos ..
+cmake --build .
+ctest --verbose  # 运行所有测试
+```

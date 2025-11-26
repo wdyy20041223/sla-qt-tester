@@ -89,7 +89,55 @@ DEV_SERVER_PORT = 9033  # 开发端口
 
 `frontend/vite.config.ts` 中的 `server.port` 也需要保持一致。
 
-## 构建打包
+## Qt 项目测试编译
+
+### 编译测试项目
+
+项目使用 CMake 构建 Qt 测试，**必须在 `build` 目录中构建**：
+
+```bash
+# 进入 Qt 项目目录
+cd playground/diagramscene_ultima
+
+# 创建并进入 build 目录
+mkdir -p build && cd build
+
+# 配置 CMake（指定 Qt 路径）
+cmake -DCMAKE_PREFIX_PATH=/Users/用户名/Qt/6.x.x/macos ..
+
+# 编译
+cmake --build .
+
+# 运行测试
+./tests/test_ui_interaction
+# 或运行所有测试
+ctest --verbose
+```
+
+### 重要说明
+
+1. **必须在 build 目录构建**：不要在项目根目录直接运行 `cmake .`
+2. **Qt 路径**：根据你的 Qt 安装位置调整 `CMAKE_PREFIX_PATH`
+3. **可执行文件位置**：构建后的测试在 `build/tests/` 目录
+4. **清理构建**：`rm -rf build` 即可清理所有构建产物
+
+### 设置 Qt 环境变量（可选）
+
+为避免每次指定 Qt 路径，可在 `~/.zshrc` 添加：
+
+```bash
+export CMAKE_PREFIX_PATH="/Users/你的用户名/Qt/6.x.x/macos:$CMAKE_PREFIX_PATH"
+export PATH="/Users/你的用户名/Qt/6.x.x/macos/bin:$PATH"
+```
+
+然后：
+```bash
+source ~/.zshrc
+cd playground/diagramscene_ultima/build
+cmake .. && cmake --build .
+```
+
+## 应用打包
 
 ```bash
 # 安装打包工具
