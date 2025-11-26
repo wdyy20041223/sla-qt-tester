@@ -140,30 +140,30 @@ function App() {
               </div>
             </div>
           ) : projectDetail ? (
-            <div className="p-8">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
+            <div className="p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
                   项目概览
                 </h2>
 
-                <div className="grid grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-4 gap-3 mb-4">
                   <InfoCard label="C++ 文件" value={projectDetail.cpp_count} />
                   <InfoCard label="头文件" value={projectDetail.header_count} />
                   <InfoCard label="UI 文件" value={projectDetail.ui_count} />
                   <InfoCard label="资源文件" value={projectDetail.qrc_count} />
                 </div>
 
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <h3 className="text-base font-semibold text-gray-800 dark:text-white mb-2">
                     项目路径
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-700 p-3 rounded">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-700 p-2 rounded">
                     {projectDetail.path}
                   </p>
                 </div>
 
-                <div className="mt-8 p-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <h3 className="text-base font-semibold text-blue-900 dark:text-blue-100 mb-1">
                     🚧 测试功能开发中
                   </h3>
                   <p className="text-sm text-blue-800 dark:text-blue-200">
@@ -180,9 +180,9 @@ function App() {
 
 function InfoCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">{label}</div>
-      <div className="text-2xl font-bold text-gray-800 dark:text-white">{value}</div>
+    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+      <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">{label}</div>
+      <div className="text-xl font-bold text-gray-800 dark:text-white">{value}</div>
     </div>
   )
 }
