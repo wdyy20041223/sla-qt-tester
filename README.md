@@ -6,21 +6,23 @@
 
 ## 快速开始
 
-### 1️⃣ 配置 DeepSeek API Key
+### 1️⃣ 配置讯飞星火 API Key
 
-项目使用 DeepSeek AI 进行单元测试失败分析。
+项目使用讯飞星火 AI 进行单元测试失败分析。
 
 1. 复制环境变量模板：
 ```bash
 cp .env.example .env
 ```
 
-2. 编辑 `.env` 文件，填入你的 API Key：
+2. 编辑 `.env` 文件，填入你的 API 配置：
 ```bash
-DEEPSEEK_API_KEY=your_api_key_here
+SPARK_API_KEY=your_api_key_here
+SPARK_BASE_URL=http://maas-api.cn-huabei-1.xf-yun.com/v1
+SPARK_MODEL=xop3qwen1b7
 ```
 
-3. 获取 API Key：访问 [DeepSeek 平台](https://platform.deepseek.com/) 申请
+3. 获取 API Key：访问 [讯飞星火平台](https://xinghuo.xfyun.cn/) 申请
 
 **注意**：`.env` 文件已在 `.gitignore` 中，不会被提交到 Git。
 

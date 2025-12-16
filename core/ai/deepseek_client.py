@@ -1,5 +1,5 @@
 """
-DeepSeek AI 客户端
+讯飞星火 AI 客户端
 用于分析单元测试失败原因
 """
 import os
@@ -11,19 +11,24 @@ from core.utils.logger import logger
 load_dotenv()
 
 
-class DeepSeekClient:
-    """DeepSeek AI 客户端"""
+class SparkClient:
+    """讯飞星火 AI 客户端"""
     
     def __init__(self):
-        api_key = os.getenv('DEEPSEEK_API_KEY')
+        api_key = os.getenv('SPARK_API_KEY')
+        base_url = os.getenv('SPARK_BASE_URL', 'http://maas-api.cn-huabei-1.xf-yun.com/v1')
+        model = os.getenv('SPARK_MODEL', 'xop3qwen1b7')
+        
         if not api_key:
-            logger.warning("未配置 DEEPSEEK_API_KEY，AI 分析功能将不可用")
+            logger.warning("未配置 SPARK_API_KEY，AI 分析功能将不可用")
             self.client = None
+            self.model = None
         else:
             self.client = OpenAI(
                 api_key=api_key,
-                base_url="https://api.deepseek.com"
+                base_url=base_url
             )
+            self.model = model
     
     def is_available(self) -> bool:
         """检查 AI 服务是否可用"""
@@ -49,7 +54,7 @@ class DeepSeekClient:
             AI 分析结果
         """
         if not self.is_available():
-            return "AI 分析服务不可用，请配置 DEEPSEEK_API_KEY"
+            return "AI 分析服务不可用，请配置 SPARK_API_KEY"
         
         # 构建上下文
         source_context = "\n\n".join([
@@ -92,7 +97,7 @@ class DeepSeekClient:
             logger.info(f"正在分析测试失败: {test_name}")
             
             response = self.client.chat.completions.create(
-                model="deepseek-chat",
+                model=self.model,
                 messages=[
                     {"role": "system", "content": "你是一个专业的 C++ 和 Qt 测试专家，擅长分析单元测试失败原因并提供修复建议。"},
                     {"role": "user", "content": prompt}
@@ -113,9 +118,13 @@ class DeepSeekClient:
 # 全局单例
 _client = None
 
-def get_deepseek_client() -> DeepSeekClient:
-    """获取 DeepSeek 客户端单例"""
+def get_spark_client() -> SparkClient:
+    """获取讯飞星火客户端单例"""
     global _client
     if _client is None:
-        _client = DeepSeekClient()
+        _client = SparkClient()
     return _client
+
+# 兼容旧接口
+get_deepseek_client = get_spark_client
+DeepSeekClient = SparkClient

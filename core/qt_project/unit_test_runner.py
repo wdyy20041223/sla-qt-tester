@@ -58,12 +58,43 @@ def run_unit_test(executable_path: str, test_name: str) -> TestResult:
         测试结果
     """
     try:
+        import os
+        import platform
+        from pathlib import Path
+        
+        # 设置环境变量，添加 Qt bin 目录到 PATH
+        env = os.environ.copy()
+        
+        # 从可执行文件路径推断 Qt 安装位置
+        exe_path = Path(executable_path)
+        
+        # 尝试查找 Qt bin 目录
+        # 在 Windows 上，Qt DLL 通常在项目附近或 Qt 安装目录
+        possible_qt_paths = []
+        
+        if platform.system() == "Windows":
+            # 查找常见的 Qt 路径
+            for drive in ['C:', 'D:']:
+                possible_qt_paths.extend([
+                    f"{drive}\\Qt\\6.10.1\\mingw_64\\bin",
+                    f"{drive}\\qtcreator\\6.10.1\\mingw_64\\bin",
+                ])
+            
+            # 添加到 PATH
+            for qt_path in possible_qt_paths:
+                if Path(qt_path).exists():
+                    env['PATH'] = f"{qt_path};{env['PATH']}"
+                    break
+        
         # 运行测试
         result = subprocess.run(
             [executable_path],
             capture_output=True,
             text=True,
-            timeout=30
+            encoding='utf-8',
+            errors='replace',  # 遇到无法解码的字节用 � 替换
+            timeout=30,
+            env=env
         )
         
         output = result.stdout + result.stderr

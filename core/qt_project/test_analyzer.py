@@ -49,7 +49,7 @@ def analyze_test_failure(
         # 4. 调用 AI 分析
         client = get_deepseek_client()
         if not client.is_available():
-            return "AI 分析服务不可用，请在 .env 文件中配置 DEEPSEEK_API_KEY"
+            return "AI 分析服务不可用，请在 .env 文件中配置 SPARK_API_KEY"
         
         analysis = client.analyze_test_failure(
             test_name=test_name,

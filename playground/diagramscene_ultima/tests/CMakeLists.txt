@@ -66,3 +66,31 @@ target_include_directories(test_ui_interaction PRIVATE
 )
 
 add_test(NAME test_ui_interaction COMMAND test_ui_interaction)
+
+# 测试 4: DiagramPath 完整功能测试
+qt_add_executable(test_diagrampath
+    test_diagrampath.cpp
+    ../diagrampath.cpp
+    ../diagramitem.cpp
+    ../diagramscene.cpp
+    ../diagramitemgroup.cpp
+    ../arrow.cpp
+    ../diagramtextitem.cpp
+    ../mainwindow.cpp
+    ../findreplacedialog.cpp
+    ../mygraphicsview.cpp
+    ../deletecommand.cpp
+    ../snapshotcommand.cpp
+)
+
+target_link_libraries(test_diagrampath PRIVATE
+    Qt6::Test
+    Qt6::Widgets
+    Qt6::Svg
+)
+
+target_include_directories(test_diagrampath PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
+add_test(NAME test_diagrampath COMMAND test_diagrampath)

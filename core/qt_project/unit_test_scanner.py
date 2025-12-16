@@ -64,7 +64,7 @@ def _find_test_executable(build_dir: Path, test_name: str) -> Path:
     跨平台查找测试可执行文件
     
     Args:
-        build_dir: build/tests 目录
+        build_dir: build/tests 目录（或 build 根目录）
         test_name: 测试名称
         
     Returns:
@@ -73,8 +73,33 @@ def _find_test_executable(build_dir: Path, test_name: str) -> Path:
     system = platform.system()
     
     if system == "Windows":
-        # Windows: test_name.exe
-        executable_path = build_dir / f"{test_name}.exe"
+        # Windows: 搜索可能的位置
+        # 1. build/tests/test_name.exe (CMake 命令行)
+        # 2. build/tests/Release/test_name.exe (Visual Studio)
+        # 3. build/tests/Debug/test_name.exe (Visual Studio Debug)
+        # 4. build/Desktop_Qt_*/test_name.exe (Qt Creator)
+        
+        # 尝试多个可能的路径
+        possible_paths = [
+            build_dir / f"{test_name}.exe",  # tests/ 目录直接编译
+            build_dir / "Release" / f"{test_name}.exe",  # VS Release
+            build_dir / "Debug" / f"{test_name}.exe",  # VS Debug
+        ]
+        
+        # 检查是否存在，返回第一个找到的
+        for path in possible_paths:
+            if path.exists():
+                return path
+        
+        # 搜索 Qt Creator 的构建目录（Desktop_Qt_*）
+        build_root = build_dir.parent  # 从 build/tests 回到 build
+        for qt_build_dir in build_root.glob("Desktop_Qt_*"):
+            qt_exe = qt_build_dir / f"{test_name}.exe"
+            if qt_exe.exists():
+                return qt_exe
+        
+        # 默认返回第一个路径（即使不存在）
+        executable_path = possible_paths[0]
         
     elif system == "Darwin":  # macOS
         # 优先尝试 .app 包（Qt 默认）
