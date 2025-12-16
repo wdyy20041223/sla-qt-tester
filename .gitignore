@@ -48,3 +48,6 @@ logs/
 # Database
 test_history.db
 test_history.db-journal
+
+# Tools (cppcheck, etc.)
+tools/

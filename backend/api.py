@@ -17,6 +17,7 @@ from core.qt_project import (
 )
 from core.database import TestDatabase
 from core.services import VisualAgent
+from backend.static_analysis_api import StaticAnalysisAPI
 from core.utils.logger import logger
 import platform
 import sys
@@ -37,6 +38,8 @@ class API:
         self.test_recorder = TestRecorder(self.test_db)
         # 初始化视觉测试代理
         self.visual_agent = VisualAgent()
+        # 初始化静态分析 API
+        self.static_analysis_api = StaticAnalysisAPI()
         logger.info("API 初始化完成")
 
     # ==================== 计算器 API ====================
@@ -437,6 +440,65 @@ class API:
         logger.info(f"清理 {days} 天前的测试记录")
         deleted = self.test_db.cleanup_old_records(days)
         return {"deleted": deleted, "success": True}
+    
+    # ==================== 静态分析 API ====================
+    
+    def check_cppcheck_status(self) -> Dict:
+        """
+        检查 cppcheck 安装状态
+        
+        Returns:
+            状态信息
+        """
+        return self.static_analysis_api.check_cppcheck_status()
+    
+    def install_cppcheck(self) -> Dict:
+        """
+        安装 cppcheck
+        
+        Returns:
+            安装结果
+        """
+        return self.static_analysis_api.install_cppcheck()
+    
+    def analyze_project_static(
+        self,
+        project_dir: str,
+        include_paths: List[str] = None,
+        enable_checks: List[str] = None,
+        severity: str = "warning"
+    ) -> Dict:
+        """
+        对项目进行静态代码分析
+        
+        Args:
+            project_dir: 项目目录
+            include_paths: 额外的头文件搜索路径
+            enable_checks: 启用的检查类型
+            severity: 严重程度过滤
+            
+        Returns:
+            分析结果
+        """
+        return self.static_analysis_api.analyze_project(
+            project_dir=project_dir,
+            include_paths=include_paths,
+            enable_checks=enable_checks,
+            severity=severity
+        )
+    
+    def analyze_file_static(self, project_dir: str, file_path: str) -> Dict:
+        """
+        对单个文件进行静态代码分析
+        
+        Args:
+            project_dir: 项目目录
+            file_path: 文件路径（相对于项目目录）
+            
+        Returns:
+            分析结果
+        """
+        return self.static_analysis_api.analyze_file(project_dir, file_path)
     
     # ==================== 视觉测试 API ====================
     

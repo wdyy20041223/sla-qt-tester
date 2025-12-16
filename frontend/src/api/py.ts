@@ -48,7 +48,7 @@ export interface SystemInfo {
 /**
  * 通用 Python 调用函数
  */
-async function callPy<T>(fn: string, ...args: unknown[]): Promise<T> {
+export async function callPy<T>(fn: string, ...args: unknown[]): Promise<T> {
   if (!window.pywebview) {
     throw new Error('PyWebView API 未就绪')
   }
