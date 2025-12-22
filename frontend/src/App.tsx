@@ -19,6 +19,7 @@ function App() {
   const [fileTree, setFileTree] = useState<FileNode[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedFile, setSelectedFile] = useState<FileNode | null>(null)
+  const [fileViewState, setFileViewState] = useState<{ file: FileNode | null; lines?: number[] }>({ file: null })
   
   // 视图模式和关于弹窗
   const [viewMode, setViewMode] = useState<ViewMode>('overview')
@@ -63,7 +64,61 @@ function App() {
   const handleFileClick = (node: FileNode) => {
     if (node.type === 'file') {
       setSelectedFile(node)
+      setFileViewState({ file: node })  // 不带高亮行
       setViewMode('filePreview')  // 自动切换到文件预览标签
+    }
+  }
+
+  // 打开文件并高亮指定行（支持多行）
+  const handleOpenFileAtLine = (filePath: string, lines: number | number[]) => {
+    const lineArray = Array.isArray(lines) ? lines : [lines]
+    console.log('📂 尝试打开文件:', filePath, '跳转到行:', lineArray)
+    
+    // 路径规范化：统一使用反斜杠（Windows）或正斜杠
+    const normalizePath = (path: string) => {
+      return path.replace(/\\/g, '/').toLowerCase()
+    }
+    
+    // 从文件树中查找对应的文件节点（支持绝对路径和相对路径匹配）
+    const findFileNode = (nodes: FileNode[], targetPath: string): FileNode | null => {
+      const normalizedTarget = normalizePath(targetPath)
+      
+      for (const node of nodes) {
+        if (node.type === 'file') {
+          const normalizedNodePath = normalizePath(node.path)
+          
+          // 尝试完全匹配
+          if (normalizedNodePath === normalizedTarget) {
+            console.log('✅ 找到匹配文件（完全匹配）:', node.path)
+            return node
+          }
+          
+          // 尝试后缀匹配（处理绝对路径 vs 相对路径）
+          if (normalizedNodePath.endsWith(normalizedTarget) || 
+              normalizedTarget.endsWith(normalizedNodePath)) {
+            console.log('✅ 找到匹配文件（后缀匹配）:', node.path)
+            return node
+          }
+        }
+        
+        if (node.type === 'directory' && node.children) {
+          const found = findFileNode(node.children, targetPath)
+          if (found) return found
+        }
+      }
+      return null
+    }
+
+    const fileNode = findFileNode(fileTree, filePath)
+    if (fileNode) {
+      console.log('🎯 设置选中文件和高亮行:', fileNode.name, 'lines:', lineArray)
+      // 使用单个状态更新确保文件和行号同步
+      setSelectedFile(fileNode)
+      setFileViewState({ file: fileNode, lines: lineArray })
+      setViewMode('filePreview')
+    } else {
+      console.error('❌ 文件不存在:', filePath)
+      alert(`找不到文件: ${filePath}`)
     }
   }
 
@@ -306,7 +361,10 @@ function App() {
             
             {viewMode === 'staticAnalysis' && selectedProject && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden h-[calc(100vh-12rem)]">
-                <StaticAnalysisPanel projectPath={selectedProject.path} />
+                <StaticAnalysisPanel 
+                  projectPath={selectedProject.path}
+                  onOpenFile={handleOpenFileAtLine}
+                />
               </div>
             )}
             
@@ -340,7 +398,11 @@ function App() {
 
             {viewMode === 'filePreview' && (
               <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-                <FilePreview file={selectedFile} projectPath={selectedProject?.path || ''} />
+                <FilePreview 
+                  file={fileViewState.file} 
+                  projectPath={selectedProject?.path || ''} 
+                  highlightLines={fileViewState.lines}
+                />
               </div>
             )}
             </div>

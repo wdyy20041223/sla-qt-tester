@@ -75,7 +75,8 @@ class StaticAnalysisAPI:
         project_dir: str,
         include_paths: Optional[list] = None,
         enable_checks: Optional[list] = None,
-        severity: str = "warning"
+        severity: str = "warning",
+        cppcheck_options: Optional[dict] = None
     ) -> Dict[str, any]:
         """
         分析整个项目
@@ -85,6 +86,7 @@ class StaticAnalysisAPI:
             include_paths: 额外的头文件搜索路径
             enable_checks: 启用的检查类型
             severity: 严重程度过滤
+            cppcheck_options: cppcheck 选项配置
         
         Returns:
             分析结果字典
@@ -111,12 +113,43 @@ class StaticAnalysisAPI:
                     "statistics": {}
                 }
             
+            # 构建额外参数
+            extra_args = []
+            if cppcheck_options:
+                # 处理检查级别
+                if cppcheck_options.get('inconclusive'):
+                    extra_args.append('--inconclusive')
+                
+                # 处理线程数
+                jobs = cppcheck_options.get('jobs')
+                if jobs and jobs > 1:
+                    extra_args.append(f'-j{jobs}')
+                
+                # 处理最大配置数
+                max_configs = cppcheck_options.get('max_configs')
+                if max_configs:
+                    extra_args.append(f'--max-configs={max_configs}')
+                
+                # 处理平台
+                platform = cppcheck_options.get('platform')
+                if platform:
+                    extra_args.append(f'--platform={platform}')
+                
+                # 处理标准
+                std = cppcheck_options.get('std')
+                if std:
+                    extra_args.append(f'--std={std}')
+            
+            # 记录参数信息
+            logger.info(f"分析参数: enable_checks={enable_checks}, extra_args={extra_args}, cppcheck_options={cppcheck_options}")
+            
             # 创建分析器并执行分析
             analyzer = StaticAnalyzer(project_dir)
             result = analyzer.analyze(
                 include_paths=include_paths,
-                enable_checks=enable_checks,
-                severity=severity
+                enable_checks=enable_checks,  # 直接传递，不做默认值处理
+                severity=severity,
+                extra_args=extra_args if extra_args else None
             )
             
             logger.info(f"项目分析完成: {result.get('message')}")

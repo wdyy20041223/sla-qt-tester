@@ -29,7 +29,8 @@ class StaticAnalyzer:
         self,
         include_paths: Optional[List[str]] = None,
         enable_checks: Optional[List[str]] = None,
-        severity: str = "warning"
+        severity: str = "warning",
+        extra_args: Optional[List[str]] = None
     ) -> Dict[str, any]:
         """
         执行静态代码分析
@@ -38,6 +39,7 @@ class StaticAnalyzer:
             include_paths: 额外的头文件搜索路径
             enable_checks: 启用的检查类型 (如 ["all", "style", "performance"])
             severity: 严重程度过滤 (error, warning, style, performance, portability, information)
+            extra_args: 额外的 cppcheck 命令行参数
         
         Returns:
             分析结果字典
@@ -56,7 +58,6 @@ class StaticAnalyzer:
         # 构建命令
         cmd = [
             cppcheck_path,
-            "--enable=all",  # 启用所有检查（包括 style, performance, portability, information）
             "--xml",  # 输出 XML 格式
             "--xml-version=2",
             "--verbose",  # 详细输出
@@ -66,14 +67,24 @@ class StaticAnalyzer:
             "--inline-suppr",  # 允许内联抑制
         ]
         
+        # 添加检查类型（优先使用 enable_checks，否则默认 all）
+        if enable_checks and len(enable_checks) > 0:
+            enable_str = ','.join(enable_checks)
+            cmd.append(f"--enable={enable_str}")
+            logger.info(f"启用的检查类型: {enable_str}")
+        else:
+            cmd.append("--enable=all")  # 默认启用所有检查
+            logger.info("使用默认检查类型: all")
+        
+        # 添加额外参数
+        if extra_args:
+            cmd.extend(extra_args)
+            logger.info(f"额外参数: {extra_args}")
+        
         # 添加 include 路径
         if include_paths:
             for path in include_paths:
                 cmd.append(f"-I{path}")
-        
-        # 添加自定义检查
-        if enable_checks:
-            cmd.append(f"--enable={','.join(enable_checks)}")
         
         # 扫描源文件
         cpp_files = list(self.project_dir.glob("*.cpp"))
@@ -238,14 +249,13 @@ class StaticAnalyzer:
                     line = location.get("line", "0")
                     column = location.get("column", "0")
                     
-                    # 转换为相对路径
-                    try:
-                        rel_path = Path(file_path).relative_to(self.project_dir)
-                    except ValueError:
-                        rel_path = Path(file_path).name
+                    # 确保使用绝对路径（与文件树一致）
+                    abs_path = Path(file_path)
+                    if not abs_path.is_absolute():
+                        abs_path = self.project_dir / file_path
                     
                     locations.append({
-                        "file": str(rel_path),
+                        "file": str(abs_path),
                         "line": int(line),
                         "column": int(column)
                     })
