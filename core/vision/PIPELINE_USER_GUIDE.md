@@ -8,6 +8,7 @@
 - [识别类型](#识别类型)
 - [动作类型](#动作类型)
 - [通用参数](#通用参数)
+- [图形节点词汇对照表](#图形节点词汇对照表)
 - [最佳实践](#最佳实践)
 - [完整示例](#完整示例)
 
@@ -266,6 +267,47 @@
 
 ---
 
+## 图形节点词汇对照表
+
+在进行视觉测试时，用户可能使用不同的描述词来指代同一个图形节点。以下是常用描述词与实际图片文件名的对照关系：
+
+### 流程图节点对照
+
+| 用户描述词 | 图片文件名 | 说明 |
+|-----------|-----------|------|
+| **菱形**、**判断**、**条件**、**分支** | `Conditional_fix.png` | 条件判断节点，菱形形状 |
+| **方形**、**矩形**、**卡片**、**处理** | `card_fix.png` | 处理步骤节点，矩形卡片形状 |
+| **圆形**、**圆** | `Circular_fix.png` | 圆形节点 |
+| **磁盘**、**数据库**、**存储** | `disk_fix.png` | 数据存储节点，圆柱形状 |
+| **输入输出**、**IO**、**数据** | `IO_fix.png` | 输入输出节点，平行四边形 |
+| **开始结束**、**起止**、**椭圆** | `startend_fix.png` | 开始/结束节点，椭圆形状 |
+| **步骤**、**流程** | `step_fix.png` | 流程步骤节点 |
+
+### 使用示例
+
+```json
+{
+    "$comment": "用户说'点击菱形工具'时，实际指向 Conditional_fix.png",
+    "选择判断工具": {
+        "recognition": "TemplateMatch",
+        "template": ["NodesIcon/final/Conditional_fix.png"],
+        "threshold": [0.2],
+        "roi": [0, 100, 220, 700],
+        "multi_scale": false,
+        "action": "Click",
+        "target": true,
+        "next": ["在画布放置"]
+    }
+}
+```
+
+**重要提示**：
+- 在编写 Pipeline 时，请使用准确的文件名，如 `Conditional_fix.png`
+- 上述词汇对照表帮助理解用户意图，但配置文件中必须使用实际的 `.png` 文件名
+- 所有图片文件都位于 `core/vision/resources/freecharts/NodesIcon/final/` 目录下
+
+---
+
 ## 最佳实践
 
 ### 1. 模板图片准备
@@ -323,7 +365,7 @@
 
 ```json
 {
-    "$comment": "FreeCharts 自动化测试示例",
+    "$comment": "FreeCharts 自动化测试示例 - 展示词汇对照表的实际使用",
     "$resource_base": "../resources/freecharts",
     
     "开始测试": {
@@ -334,6 +376,7 @@
     },
     
     "选择菱形工具": {
+        "$comment": "用户说'菱形'或'判断'时，对应 Conditional_fix.png",
         "recognition": "TemplateMatch",
         "template": ["NodesIcon/final/Conditional_fix.png"],
         "threshold": [0.2],
@@ -343,13 +386,36 @@
         "target": true,
         "pre_delay": 300,
         "post_delay": 500,
-        "next": ["在画布放置"]
+        "next": ["在画布放置菱形"]
     },
     
-    "在画布放置": {
+    "在画布放置菱形": {
         "recognition": "DirectHit",
         "action": "Click",
         "target": [600, 300],
+        "pre_delay": 200,
+        "post_delay": 500,
+        "next": ["选择矩形工具"]
+    },
+    
+    "选择矩形工具": {
+        "$comment": "用户说'方形'、'矩形'或'卡片'时，对应 card_fix.png",
+        "recognition": "TemplateMatch",
+        "template": ["NodesIcon/final/card_fix.png"],
+        "threshold": [0.2],
+        "roi": [0, 100, 220, 700],
+        "multi_scale": false,
+        "action": "Click",
+        "target": true,
+        "pre_delay": 300,
+        "post_delay": 500,
+        "next": ["在画布放置矩形"]
+    },
+    
+    "在画布放置矩形": {
+        "recognition": "DirectHit",
+        "action": "Click",
+        "target": [800, 400],
         "pre_delay": 200,
         "post_delay": 500,
         "next": ["测试完成"]
