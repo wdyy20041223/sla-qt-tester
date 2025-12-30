@@ -42,6 +42,16 @@ class TemplateMatcherParam:
     
     # 返回第几个结果（支持负数索引）
     result_index: int = 0
+    
+    # ===== 多尺度匹配参数 =====
+    # 是否启用多尺度匹配
+    multi_scale: bool = True
+    
+    # 缩放范围 [min_scale, max_scale]
+    scale_range: List[float] = field(default_factory=lambda: [0.5, 1.5])
+    
+    # 缩放步长
+    scale_step: float = 0.1
 
 
 class TemplateMatcher(VisionBase):
@@ -107,6 +117,7 @@ class TemplateMatcher(VisionBase):
         result = RecoResult(algorithm="TemplateMatch")
         
         if not self._templates:
+            print(f"[TemplateMatcher] 警告: 没有加载任何模板!")
             result.cost_ms = (time.perf_counter() - start_time) * 1000
             return result
         
@@ -117,6 +128,11 @@ class TemplateMatcher(VisionBase):
         for i, template in enumerate(self._templates):
             threshold = self._get_threshold(i)
             matches = self._template_match(template)
+            
+            # 调试: 输出匹配结果
+            if matches:
+                best_match = max(matches, key=lambda m: m.score) if not self._low_score_better else min(matches, key=lambda m: m.score)
+                print(f"[TemplateMatcher] 模板 {i}: 最佳分数={best_match.score:.4f}, 阈值={threshold}, 位置=({best_match.box.x}, {best_match.box.y})")
             
             # 添加到全部结果
             all_results.extend(matches)
@@ -143,6 +159,11 @@ class TemplateMatcher(VisionBase):
         result.filtered_results = filtered_results
         result.cost_ms = (time.perf_counter() - start_time) * 1000
         
+        # 输出匹配结果摘要
+        print(f"[TemplateMatcher] 匹配完成: 全部={len(all_results)}, 过滤后={len(filtered_results)}, 成功={result.success}, 耗时={result.cost_ms:.1f}ms")
+        if result.best_result:
+            print(f"[TemplateMatcher] 最终结果: 分数={result.score:.4f}, 位置=({result.box.x}, {result.box.y}, {result.box.width}x{result.box.height})")
+        
         # 调试绘图
         if self._debug_draw and result.best_result:
             result.debug_image = self._draw_result(filtered_results)
@@ -150,12 +171,11 @@ class TemplateMatcher(VisionBase):
         return result
     
     def _template_match(self, template: np.ndarray) -> List[MatchResult]:
-        """执行单个模板的匹配"""
-        image_roi = self.image_with_roi()
+        """执行单个模板的匹配 (优化版本 - 参考 MAA 框架)
         
-        # 检查尺寸
-        if template.shape[0] > image_roi.shape[0] or template.shape[1] > image_roi.shape[1]:
-            return []
+        支持多尺度匹配: 当启用 multi_scale 时，会在不同缩放比例下进行匹配
+        """
+        image_roi = self.image_with_roi()
         
         # 处理匹配方法
         method = self._param.method
@@ -164,41 +184,102 @@ class TemplateMatcher(VisionBase):
             invert_score = True
             method -= self.METHOD_INVERT_BASE
         
-        # 创建掩码（可选）
-        mask = self._create_mask(template) if self._param.green_mask else None
+        all_results: List[MatchResult] = []
         
-        # 执行模板匹配
-        if mask is not None:
-            matched = cv2.matchTemplate(image_roi, template, method, mask=mask)
+        # ===== 多尺度匹配 =====
+        if self._param.multi_scale:
+            scales = np.arange(
+                self._param.scale_range[0],
+                self._param.scale_range[1] + self._param.scale_step,
+                self._param.scale_step
+            )
         else:
-            matched = cv2.matchTemplate(image_roi, template, method)
+            scales = [1.0]
         
-        # 反转分数
-        if invert_score:
-            matched = 1.0 - matched
+        best_overall_score = 0.0 if not self._low_score_better else float('inf')
+        best_overall_result = None
         
-        # 提取匹配结果
-        results: List[MatchResult] = []
-        h, w = template.shape[:2]
-        
-        # 使用阈值提取候选点
-        # 对于 TM_SQDIFF，分数越低越好
-        threshold = 0.5 if not self._low_score_better else 0.5
-        
-        for row in range(matched.shape[0]):
-            for col in range(matched.shape[1]):
+        for scale in scales:
+            # 缩放模板
+            if scale != 1.0:
+                new_w = max(1, int(template.shape[1] * scale))
+                new_h = max(1, int(template.shape[0] * scale))
+                scaled_template = cv2.resize(template, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+            else:
+                scaled_template = template
+            
+            h, w = scaled_template.shape[:2]
+            
+            # 检查尺寸
+            if h > image_roi.shape[0] or w > image_roi.shape[1]:
+                continue
+            
+            # 创建掩码（可选）
+            mask = self._create_mask(scaled_template) if self._param.green_mask else None
+            
+            # 执行模板匹配
+            if mask is not None:
+                matched = cv2.matchTemplate(image_roi, scaled_template, method, mask=mask)
+            else:
+                matched = cv2.matchTemplate(image_roi, scaled_template, method)
+            
+            # 反转分数
+            if invert_score:
+                matched = 1.0 - matched
+            
+            # 使用 minMaxLoc 找最佳匹配点
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(matched)
+            
+            if self._low_score_better:
+                best_score = float(min_val)
+                best_loc = min_loc
+            else:
+                best_score = float(max_val)
+                best_loc = max_loc
+            
+            # 处理无效分数
+            if np.isnan(best_score) or np.isinf(best_score):
+                continue
+            
+            # 更新最佳结果
+            is_better = (not self._low_score_better and best_score > best_overall_score) or \
+                        (self._low_score_better and best_score < best_overall_score)
+            
+            if is_better:
+                best_overall_score = best_score
+                best_overall_result = MatchResult(
+                    box=Rect(
+                        x=best_loc[0] + self._roi.x,
+                        y=best_loc[1] + self._roi.y,
+                        width=w,
+                        height=h
+                    ),
+                    score=best_score
+                )
+            
+            # 提取当前尺度的候选点
+            pre_filter_threshold = 0.5
+            if self._low_score_better:
+                candidate_mask = matched < pre_filter_threshold
+            else:
+                candidate_mask = matched >= pre_filter_threshold
+            
+            candidate_coords = np.argwhere(candidate_mask)
+            
+            # 限制候选点数量
+            MAX_CANDIDATES = 50
+            if len(candidate_coords) > MAX_CANDIDATES:
+                scores = matched[candidate_mask]
+                if self._low_score_better:
+                    top_indices = np.argsort(scores)[:MAX_CANDIDATES]
+                else:
+                    top_indices = np.argsort(scores)[-MAX_CANDIDATES:][::-1]
+                candidate_coords = candidate_coords[top_indices]
+            
+            for row, col in candidate_coords:
                 score = float(matched[row, col])
-                
                 if np.isnan(score) or np.isinf(score):
                     continue
-                
-                # 初步筛选
-                if self._low_score_better:
-                    if score > threshold:
-                        continue
-                else:
-                    if score < threshold:
-                        continue
                 
                 box = Rect(
                     x=col + self._roi.x,
@@ -206,12 +287,23 @@ class TemplateMatcher(VisionBase):
                     width=w,
                     height=h
                 )
-                results.append(MatchResult(box=box, score=score))
+                all_results.append(MatchResult(box=box, score=score))
         
-        # NMS 去重
-        results = self.nms(results, iou_threshold=0.7)
+        # 确保至少有一个结果 (参考 MAA: At least there is a result)
+        if not all_results and best_overall_result:
+            all_results.append(best_overall_result)
+        elif not all_results:
+            # 即使失败也返回一个占位结果
+            h, w = template.shape[:2]
+            all_results.append(MatchResult(
+                box=Rect(x=self._roi.x, y=self._roi.y, width=w, height=h),
+                score=0.0
+            ))
         
-        return results
+        # NMS 去重 (参考 MAA 的 0.7 阈值)
+        all_results = self.nms(all_results, iou_threshold=0.7)
+        
+        return all_results
     
     def _create_mask(self, template: np.ndarray) -> Optional[np.ndarray]:
         """创建绿色掩码

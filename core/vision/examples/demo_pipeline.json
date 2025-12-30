@@ -1,6 +1,6 @@
 {
-    "$comment": "FreeCharts 流程图编辑器 - 基础测试",
-    "$description": "测试在画布上创建流程图节点",
+    "$comment": "FreeCharts 流程图编辑器 - Disk图标识别测试",
+    "$description": "使用 Disk 图标测试模板匹配能力 - Disk 图标区分度强，适合作为基准测试",
     "$resource_base": "../resources/freecharts",
     
     "开始测试": {
@@ -19,67 +19,76 @@
         "rate_limit": 500,
         "action": "DoNothing",
         "post_delay": 500,
-        "next": ["选择处理节点"]
+        "next": ["识别Disk图标"]
     },
     
-    "选择处理节点": {
+    "识别Disk图标": {
         "recognition": "TemplateMatch",
-        "template": ["NodesIcon/Disk.jpg"],
-        "threshold": [0.6],
-        "roi": [0, 50, 200, 800],
+        "template": ["NodesIcon/Disk.png"],
+        "threshold": [0.5],
+        "roi": [0, 50, 220, 800],
         "timeout": 5000,
+        "multi_scale": true,
+        "scale_range": [0.3, 1.2],
+        "scale_step": 0.1,
         "action": "Click",
         "target": true,
         "pre_delay": 300,
         "post_delay": 500,
-        "next": ["在画布放置处理节点"]
+        "next": ["在画布放置Disk节点"]
     },
     
-    "在画布放置处理节点": {
+    "在画布放置Disk节点": {
         "recognition": "DirectHit",
         "action": "Click",
         "target": [600, 300],
         "pre_delay": 200,
         "post_delay": 500,
-        "next": ["选择判断节点"]
+        "next": ["再次识别Disk"]
     },
     
-    "选择判断节点": {
+    "再次识别Disk": {
         "recognition": "TemplateMatch",
-        "template": ["NodesIcon/Disk.jpg"],
-        "threshold": [0.6],
-        "roi": [0, 50, 200, 800],
+        "template": ["NodesIcon/Disk.png"],
+        "threshold": [0.5],
+        "roi": [0, 50, 220, 800],
         "timeout": 5000,
+        "multi_scale": true,
+        "scale_range": [0.3, 1.2],
+        "scale_step": 0.1,
         "action": "Click",
         "target": true,
         "pre_delay": 300,
         "post_delay": 500,
-        "next": ["在画布放置判断节点"]
+        "next": ["在画布放置第二个节点"]
     },
     
-    "在画布放置判断节点": {
+    "在画布放置第二个节点": {
         "recognition": "DirectHit",
         "action": "Click",
         "target": [600, 500],
         "pre_delay": 200,
         "post_delay": 500,
-        "next": ["选择端点节点"]
+        "next": ["第三次识别Disk"]
     },
     
-    "选择端点节点": {
+    "第三次识别Disk": {
         "recognition": "TemplateMatch",
-        "template": ["NodesIcon/Disk.jpg"],
-        "threshold": [0.6],
-        "roi": [0, 50, 200, 800],
+        "template": ["NodesIcon/Disk.png"],
+        "threshold": [0.5],
+        "roi": [0, 50, 220, 800],
         "timeout": 5000,
+        "multi_scale": true,
+        "scale_range": [0.3, 1.2],
+        "scale_step": 0.1,
         "action": "Click",
         "target": true,
         "pre_delay": 300,
         "post_delay": 500,
-        "next": ["在画布放置端点节点"]
+        "next": ["在画布放置第三个节点"]
     },
     
-    "在画布放置端点节点": {
+    "在画布放置第三个节点": {
         "recognition": "DirectHit",
         "action": "Click",
         "target": [600, 150],

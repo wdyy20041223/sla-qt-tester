@@ -27,12 +27,14 @@ except ImportError:
 from .types import Rect, RecoResult, MatchResult, Point
 from .template_matcher import TemplateMatcher, TemplateMatcherParam
 from .color_matcher import ColorMatcher, ColorMatcherParam
+from .feature_matcher import FeatureMatcher, FeatureMatcherParam, FeatureDetector
 
 
 class RecognitionType(Enum):
     """识别算法类型"""
     DIRECT_HIT = auto()      # 直接命中，不识别
     TEMPLATE_MATCH = auto()  # 模板匹配
+    FEATURE_MATCH = auto()   # 特征匹配 (抗透视/旋转)
     COLOR_MATCH = auto()     # 颜色匹配
     # OCR = auto()           # 文字识别（可扩展）
 
@@ -91,6 +93,8 @@ class PipelineNode:
         reco_str = data.get('recognition', 'DirectHit')
         if reco_str == 'TemplateMatch':
             reco_type = RecognitionType.TEMPLATE_MATCH
+        elif reco_str == 'FeatureMatch':
+            reco_type = RecognitionType.FEATURE_MATCH
         elif reco_str == 'ColorMatch':
             reco_type = RecognitionType.COLOR_MATCH
         
@@ -115,6 +119,17 @@ class PipelineNode:
                 'template': data.get('template', []),
                 'threshold': data.get('threshold', [0.7]),
                 'method': data.get('method', 5),
+                'green_mask': data.get('green_mask', False),
+                'multi_scale': data.get('multi_scale', True),
+                'scale_range': data.get('scale_range', [0.5, 1.5]),
+                'scale_step': data.get('scale_step', 0.1),
+            }
+        elif reco_type == RecognitionType.FEATURE_MATCH:
+            reco_param = {
+                'template': data.get('template', []),
+                'detector': data.get('detector', 'AKAZE'),
+                'ratio': data.get('ratio', 0.75),
+                'count': data.get('count', 10),
                 'green_mask': data.get('green_mask', False),
             }
         elif reco_type == RecognitionType.COLOR_MATCH:
@@ -401,6 +416,9 @@ class Pipeline:
         elif node.recognition == RecognitionType.TEMPLATE_MATCH:
             return self._template_match(image, node, roi)
         
+        elif node.recognition == RecognitionType.FEATURE_MATCH:
+            return self._feature_match(image, node, roi)
+        
         elif node.recognition == RecognitionType.COLOR_MATCH:
             return self._color_match(image, node, roi)
         
@@ -413,7 +431,7 @@ class Pipeline:
         node: PipelineNode,
         roi: Optional[Rect]
     ) -> RecoResult:
-        """模板匹配"""
+        """模板匹配 (支持多尺度)"""
         param = node.recognition_param
         
         # 处理模板路径
@@ -443,9 +461,60 @@ class Pipeline:
             thresholds=thresholds,
             method=param.get('method', 5),
             green_mask=param.get('green_mask', False),
+            multi_scale=param.get('multi_scale', True),
+            scale_range=param.get('scale_range', [0.5, 1.5]),
+            scale_step=param.get('scale_step', 0.1),
         )
         
         matcher = TemplateMatcher(image, matcher_param, roi, name=node.name)
+        return matcher.analyze()
+    
+    def _feature_match(
+        self,
+        image: np.ndarray,
+        node: PipelineNode,
+        roi: Optional[Rect]
+    ) -> RecoResult:
+        """特征匹配 (抗透视/旋转)"""
+        param = node.recognition_param
+        
+        # 处理模板路径
+        templates = param.get('template', [])
+        if isinstance(templates, str):
+            templates = [templates]
+        
+        # 如果设置了资源目录，补全路径
+        if self._resource_dir:
+            templates = [
+                str(self._resource_dir / t) if not Path(t).is_absolute() else t
+                for t in templates
+            ]
+        
+        # 验证模板文件是否存在
+        for t in templates:
+            if not Path(t).exists():
+                self._log(f"警告: 模板文件不存在: {t}")
+        
+        # 解析检测器类型
+        detector_str = param.get('detector', 'AKAZE')
+        detector_map = {
+            'SIFT': FeatureDetector.SIFT,
+            'ORB': FeatureDetector.ORB,
+            'BRISK': FeatureDetector.BRISK,
+            'KAZE': FeatureDetector.KAZE,
+            'AKAZE': FeatureDetector.AKAZE,
+        }
+        detector = detector_map.get(detector_str.upper(), FeatureDetector.AKAZE)
+        
+        matcher_param = FeatureMatcherParam(
+            templates=templates,
+            detector=detector,
+            ratio=param.get('ratio', 0.75),
+            count=param.get('count', 10),
+            green_mask=param.get('green_mask', False),
+        )
+        
+        matcher = FeatureMatcher(image, matcher_param, roi, name=node.name)
         return matcher.analyze()
     
     def _color_match(
