@@ -160,9 +160,16 @@ class TestDatabase:
         Returns:
             测试记录列表
         """
+        logger.info(f"查询测试历史: project_path={project_path}, limit={limit}")
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
+            
+            # 先查询所有不同的项目路径（调试用）
+            cursor.execute("SELECT DISTINCT project_path FROM test_runs")
+            all_paths = [row[0] for row in cursor.fetchall()]
+            logger.info(f"数据库中存在的项目路径: {all_paths}")
+            
             cursor.execute("""
                 SELECT * FROM test_runs
                 WHERE project_path = ?
@@ -171,6 +178,7 @@ class TestDatabase:
             """, (project_path, limit))
             
             rows = cursor.fetchall()
+            logger.info(f"查询到 {len(rows)} 条记录")
             return [TestRun(**dict(row)) for row in rows]
     
     def get_test_run_detail(self, run_id: int) -> Optional[TestRunDetail]:

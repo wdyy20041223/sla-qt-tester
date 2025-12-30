@@ -27,6 +27,8 @@ export interface TestResult {
   duration: string
   output: string
   details: TestCaseResult[]
+  run_id?: number
+  ai_analysis?: string  // AI 分析结果（Markdown 格式）
 }
 
 // ==================== API 调用 ====================
@@ -72,7 +74,8 @@ export async function analyzeTestFailure(
   projectPath: string,
   testName: string,
   testFilePath: string,
-  failureOutput: string
+  failureOutput: string,
+  runId?: number
 ): Promise<string> {
-  return callPy<string>('analyze_test_failure', projectPath, testName, testFilePath, failureOutput)
+  return callPy<string>('analyze_test_failure', projectPath, testName, testFilePath, failureOutput, runId)
 }

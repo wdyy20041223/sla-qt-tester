@@ -232,13 +232,19 @@ class API:
         Returns:
             测试结果（含 run_id）
         """
-        logger.info(f"运行单元测试: {test_name}")
+        logger.info(f"运行单元测试: {test_name}, 项目路径: {project_path}")
         result = run_unit_test(executable_path, test_name)
+        logger.info(f"测试执行完成: {test_name}, 状态: {result.status}")
         
-        # 记录到数据库
-        run_id = self.test_recorder.record_unit_test(project_path, result)
+        # 记录到数据库（不包含 AI 分析）
+        logger.info(f"准备记录测试结果到数据库...")
+        run_id = self.test_recorder.record_unit_test(project_path, result, ai_analysis=None)
+        logger.info(f"测试结果已记录，run_id: {run_id}")
         
-        return {**result.to_dict(), "run_id": run_id}
+        result_dict = result.to_dict()
+        result_dict["run_id"] = run_id
+        
+        return result_dict
     
     def run_ui_test_with_record(self, executable_path: str, test_name: str, project_path: str) -> Dict:
         """
@@ -265,7 +271,8 @@ class API:
         project_path: str,
         test_name: str,
         test_file_path: str,
-        failure_output: str
+        failure_output: str,
+        run_id: int = None
     ) -> str:
         """
         分析测试失败原因
@@ -275,17 +282,24 @@ class API:
             test_name: 测试名称
             test_file_path: 测试文件路径
             failure_output: 失败输出
+            run_id: 测试运行ID（可选）
             
         Returns:
             AI 分析结果
         """
-        logger.info(f"AI 分析测试失败: {test_name}")
+        logger.info(f"AI 分析测试失败: {test_name}, run_id: {run_id}")
         analysis = analyze_test_failure(
             project_path,
             test_name,
             test_file_path,
             failure_output
         )
+        
+        # 如果提供了 run_id，更新测试历史记录
+        if run_id is not None:
+            logger.info(f"更新测试历史的 AI 分析: run_id={run_id}")
+            self.test_recorder.update_ai_analysis(run_id, analysis)
+        
         return analysis
     
     def read_file_content(self, file_path: str) -> Dict:

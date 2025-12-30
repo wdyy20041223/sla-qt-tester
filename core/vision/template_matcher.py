@@ -29,7 +29,7 @@ class TemplateMatcherParam:
     templates: List[Union[str, np.ndarray]] = field(default_factory=list)
     
     # 匹配阈值 (0-1)，可以为每个模板设置不同阈值
-    thresholds: List[float] = field(default_factory=lambda: [0.7])
+    thresholds: List[float] = field(default_factory=lambda: [1])
     
     # 匹配算法 (cv2.TM_CCOEFF_NORMED = 5)
     method: int = 5
